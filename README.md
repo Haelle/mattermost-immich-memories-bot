@@ -1,0 +1,1 @@
+# mattermost-immich-memories-bot
