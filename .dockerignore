@@ -1,0 +1,5 @@
+.git
+.venv
+.pytest_cache
+tests
+secrets
