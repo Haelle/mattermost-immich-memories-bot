@@ -1,4 +1,41 @@
+import json
+
 import httpx
+
+
+class FakeMattermost:
+    def __init__(self):
+        self.requests: list[httpx.Request] = []
+        self.uploaded = 0
+        self.deleted_users = {"u-gone"}
+        self.failing_posts = False
+
+    def __call__(self, request: httpx.Request) -> httpx.Response:
+        self.requests.append(request)
+        assert request.headers["authorization"] == "Bearer bot-token"
+        path = request.url.path
+        if path == "/api/v4/users/me":
+            return httpx.Response(200, json={"id": "bot-id", "username": "souvenirs", "delete_at": 0})
+        if path.startswith("/api/v4/users/"):
+            user_id = path.rsplit("/", 1)[1]
+            return httpx.Response(
+                200, json={"id": user_id, "delete_at": 1700000000000 if user_id in self.deleted_users else 0}
+            )
+        if path == "/api/v4/channels/direct":
+            return httpx.Response(201, json={"id": "dm-channel", "type": "D"})
+        if path == "/api/v4/files":
+            self.uploaded += 1
+            return httpx.Response(201, json={"file_infos": [{"id": f"file-{self.uploaded}"}], "client_ids": []})
+        if path == "/api/v4/posts":
+            if self.failing_posts:
+                return httpx.Response(500)
+            return httpx.Response(201, json={"id": "post-1"})
+        if path == "/api/v4/actions/dialogs/open":
+            return httpx.Response(200, json={"status": "OK"})
+        return httpx.Response(404)
+
+    def bodies(self, path):
+        return [json.loads(request.content) for request in self.requests if request.url.path == path]
 
 
 def memory_payload(memory_id, year, asset_ids, memory_type="on_this_day"):
