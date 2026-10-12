@@ -65,6 +65,30 @@ async def test_deliver_posts_memories_with_covers_and_marks_sent(sender, store, 
     assert store.get("u1").last_sent_on == DAY
 
 
+async def test_deliver_latest_posts_the_last_memory_without_marking_sent(sender, store, immich, mattermost):
+    store.register("u1", "dm-u1", "key-u1", time(9, 0))
+    immich.latest_by_key["key-u1"] = [memory_payload("m2019", 2019, ["a1"], show_at="2026-10-08T12:00:00.000Z")]
+
+    outcome = await sender.deliver_latest(store.get("u1"))
+
+    assert outcome is Outcome.SENT
+    [post] = posted_messages(mattermost)
+    assert post["channel_id"] == "dm-u1"
+    assert post["message"].startswith("#### Tes souvenirs du 8 octobre")
+    assert "[Il y a 7 ans — 2019 · 1 photo](immich://memory?id=m2019)" in post["message"]
+    assert post["file_ids"] == ["file-1"]
+    assert store.get("u1").last_sent_on is None
+
+
+async def test_deliver_latest_without_any_memory_sends_nothing(sender, store, mattermost):
+    store.register("u1", "dm-u1", "key-u1", time(9, 0))
+
+    outcome = await sender.deliver_latest(store.get("u1"))
+
+    assert outcome is Outcome.NO_MEMORIES
+    assert posted_messages(mattermost) == []
+
+
 async def test_no_memories_sends_nothing(sender, store, mattermost):
     store.register("u1", "dm-u1", "key-u1", time(9, 0))
 

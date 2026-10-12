@@ -38,13 +38,13 @@ class FakeMattermost:
         return [json.loads(request.content) for request in self.requests if request.url.path == path]
 
 
-def memory_payload(memory_id, year, asset_ids, memory_type="on_this_day"):
+def memory_payload(memory_id, year, asset_ids, memory_type="on_this_day", show_at="2026-10-11T00:00:00.000Z"):
     return {
         "id": memory_id,
         "createdAt": "2026-10-11T00:00:00.000Z",
         "updatedAt": "2026-10-11T00:00:00.000Z",
         "memoryAt": f"{year}-10-11T00:00:00.000Z",
-        "showAt": "2026-10-11T00:00:00.000Z",
+        "showAt": show_at,
         "hideAt": "2026-10-12T00:00:00.000Z",
         "seenAt": None,
         "ownerId": "owner-1",
@@ -58,6 +58,7 @@ def memory_payload(memory_id, year, asset_ids, memory_type="on_this_day"):
 class FakeImmich:
     def __init__(self):
         self.memories_by_key: dict[str, list[dict]] = {}
+        self.latest_by_key: dict[str, list[dict]] = {}
         self.rejected_keys: set[str] = set()
         self.down = False
         self.missing_thumbnails: set[str] = set()
@@ -71,7 +72,8 @@ class FakeImmich:
         if key in self.rejected_keys:
             return httpx.Response(401, json={"message": "Invalid API key"})
         if request.url.path == "/api/memories":
-            return httpx.Response(200, json=self.memories_by_key.get(key, []))
+            memories = self.memories_by_key if "for" in request.url.params else self.latest_by_key
+            return httpx.Response(200, json=memories.get(key, []))
         asset_id = request.url.path.split("/")[3]
         if asset_id in self.missing_thumbnails:
             return httpx.Response(404)

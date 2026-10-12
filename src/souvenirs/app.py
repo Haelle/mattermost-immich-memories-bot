@@ -20,7 +20,7 @@ HELP = """Commandes disponibles :
 - `/souvenirs activer` : t'inscrire ou remplacer ta clé Immich
 - `/souvenirs statut` : voir ton inscription
 - `/souvenirs heure HH:MM` : changer l'heure d'envoi quotidienne
-- `/souvenirs test` : recevoir tout de suite les souvenirs du jour
+- `/souvenirs test` : recevoir tout de suite les souvenirs du jour, ou le dernier s'il n'y en a pas
 - `/souvenirs désactiver` : te désinscrire et supprimer ta clé"""
 
 NOT_REGISTERED = "Tu n'es pas inscrit. Lance `/souvenirs activer`."
@@ -118,10 +118,14 @@ def create_app(
         if user is None:
             return ephemeral(NOT_REGISTERED)
         outcome = await sender.deliver(user, clock().date())
+        if outcome is Outcome.NO_MEMORIES:
+            outcome = await sender.deliver_latest(user)
+            if outcome is Outcome.SENT:
+                return ephemeral("Pas de souvenir aujourd'hui, je t'ai envoyé le dernier dans ta conversation privée.")
         return ephemeral(
             {
                 Outcome.SENT: "C'est envoyé, regarde ta conversation privée avec le bot.",
-                Outcome.NO_MEMORIES: "Aucun souvenir aujourd'hui.",
+                Outcome.NO_MEMORIES: "Aucun souvenir dans Immich pour l'instant.",
                 Outcome.KEY_REJECTED: "Ta clé Immich ne fonctionne plus, relance `/souvenirs activer`.",
                 Outcome.FAILED: "L'envoi a échoué, réessaie plus tard (`/souvenirs statut` pour le détail).",
             }[outcome]

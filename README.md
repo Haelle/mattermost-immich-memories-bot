@@ -11,7 +11,7 @@ Chaque utilisateur s'inscrit seul avec `/souvenirs activer` et sa propre clé AP
 | `/souvenirs activer` | Ouvre la boîte de dialogue ; inscrit l'utilisateur ou remplace sa clé |
 | `/souvenirs statut` | Actif ou non, heure d'envoi, date d'inscription, dernier envoi, dernière erreur |
 | `/souvenirs heure HH:MM` | Change l'heure d'envoi quotidienne ; sans argument, l'affiche |
-| `/souvenirs test` | Envoie tout de suite le message du jour |
+| `/souvenirs test` | Envoie tout de suite le message du jour, ou le dernier souvenir s'il n'y en a pas aujourd'hui (sans compter comme l'envoi du jour) |
 | `/souvenirs désactiver` | Supprime la clé et l'inscription |
 
 ## Mise en place

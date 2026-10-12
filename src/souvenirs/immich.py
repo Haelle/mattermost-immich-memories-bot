@@ -1,6 +1,6 @@
 import asyncio
 from dataclasses import dataclass
-from datetime import date
+from datetime import date, datetime
 
 import httpx
 
@@ -23,6 +23,15 @@ class Memory:
     cover_asset_id: str
 
 
+def _memory(item: dict) -> Memory:
+    return Memory(
+        id=item["id"],
+        year=item["data"]["year"],
+        asset_count=len(item["assets"]),
+        cover_asset_id=item["assets"][0]["id"],
+    )
+
+
 class ImmichClient:
     def __init__(self, base_url: str, api_key: str, http: httpx.AsyncClient, retry_delay_seconds: float = 5):
         self._base_url = base_url.rstrip("/")
@@ -32,17 +41,17 @@ class ImmichClient:
 
     async def memories_on(self, day: date) -> list[Memory]:
         response = await self._get("/api/memories", params={"for": day.isoformat()})
-        memories = [
-            Memory(
-                id=item["id"],
-                year=item["data"]["year"],
-                asset_count=len(item["assets"]),
-                cover_asset_id=item["assets"][0]["id"],
-            )
-            for item in response.json()
-            if item["type"] == "on_this_day" and item["assets"]
-        ]
+        memories = [_memory(item) for item in response.json() if item["type"] == "on_this_day" and item["assets"]]
         return sorted(memories, key=lambda memory: memory.year, reverse=True)
+
+    async def latest_memory(self) -> tuple[date, Memory] | None:
+        response = await self._get(
+            "/api/memories", params={"type": "on_this_day", "isUpcoming": "false", "order": "desc", "size": "1"}
+        )
+        for item in response.json():
+            if item["assets"]:
+                return datetime.fromisoformat(item["showAt"]).astimezone().date(), _memory(item)
+        return None
 
     async def thumbnail(self, asset_id: str) -> bytes:
         response = await self._get(f"/api/assets/{asset_id}/thumbnail", params={"size": "preview"})
