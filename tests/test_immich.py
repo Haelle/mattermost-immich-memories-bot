@@ -81,6 +81,30 @@ async def test_transient_failure_recovers_on_retry():
     assert len(calls) == 2
 
 
+async def test_latest_memory_is_the_most_recently_shown_with_its_day():
+    requests = []
+
+    def handler(request):
+        requests.append(request)
+        return httpx.Response(
+            200, json=[memory_payload("m2019", 2019, ["a1", "a2"], show_at="2026-10-08T12:00:00.000Z")]
+        )
+
+    latest = await client_for(handler).latest_memory()
+
+    assert latest == (date(2026, 10, 8), Memory(id="m2019", year=2019, asset_count=2, cover_asset_id="a1"))
+    assert requests[0].url.params == httpx.QueryParams(
+        {"type": "on_this_day", "isUpcoming": "false", "order": "desc", "size": "1"}
+    )
+
+
+async def test_latest_memory_is_none_when_immich_has_none():
+    def handler(request):
+        return httpx.Response(200, json=[])
+
+    assert await client_for(handler).latest_memory() is None
+
+
 async def test_thumbnail_returns_preview_bytes():
     requests = []
 

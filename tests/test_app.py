@@ -266,13 +266,25 @@ def test_test_sends_today_memories_even_if_already_sent(client, store, immich, m
     assert response.json()["response_type"] == "ephemeral"
 
 
-def test_test_without_memories_says_so(client, store, mattermost):
+def test_test_without_memories_today_sends_the_latest_one(client, store, immich, mattermost):
+    store.register("u1", "dm1", "key", time(9, 0))
+    immich.latest_by_key["key"] = [memory_payload("m2019", 2019, ["a1"], show_at="2026-10-08T12:00:00.000Z")]
+
+    response = command(client, "test")
+
+    [post] = mattermost.bodies("/api/v4/posts")
+    assert "immich://memory?id=m2019" in post["message"]
+    assert "dernier" in response.json()["text"]
+    assert store.get("u1").last_sent_on is None
+
+
+def test_test_without_any_memory_says_so(client, store, mattermost):
     store.register("u1", "dm1", "key", time(9, 0))
 
     response = command(client, "test")
 
     assert mattermost.bodies("/api/v4/posts") == []
-    assert "aucun souvenir" in response.json()["text"].lower()
+    assert "Aucun souvenir dans Immich" in response.json()["text"]
 
 
 @pytest.mark.parametrize("text", ["désactiver", "desactiver"])

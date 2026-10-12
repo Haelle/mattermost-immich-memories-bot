@@ -1,5 +1,5 @@
 import logging
-from collections.abc import Callable
+from collections.abc import Awaitable, Callable
 from datetime import date, datetime
 from enum import Enum
 
@@ -52,9 +52,27 @@ class Sender:
             await self.deliver(user, tick.date())
 
     async def deliver(self, user: User, day: date) -> Outcome:
+        async def memories_of_the_day(immich: ImmichClient) -> tuple[date, list[Memory]]:
+            return day, await immich.memories_on(day)
+
+        return await self._deliver(user, memories_of_the_day, mark_sent=True)
+
+    async def deliver_latest(self, user: User) -> Outcome:
+        async def latest_memory(immich: ImmichClient) -> tuple[date, list[Memory]] | None:
+            latest = await immich.latest_memory()
+            return (latest[0], [latest[1]]) if latest else None
+
+        return await self._deliver(user, latest_memory, mark_sent=False)
+
+    async def _deliver(
+        self,
+        user: User,
+        fetch: Callable[[ImmichClient], Awaitable[tuple[date, list[Memory]] | None]],
+        mark_sent: bool,
+    ) -> Outcome:
         immich = self._immich_for(user.immich_key)
         try:
-            memories = await immich.memories_on(day)
+            found = await fetch(immich)
         except ImmichKeyRejected as error:
             self._store.deactivate(user.mm_user_id, str(error))
             await self._warn_key_rejected(user)
@@ -63,8 +81,9 @@ class Sender:
             self._store.record_error(user.mm_user_id, str(error))
             return self._log(user, 0, Outcome.FAILED, str(error))
 
-        if not memories:
+        if not found or not found[1]:
             return self._log(user, 0, Outcome.NO_MEMORIES)
+        day, memories = found
 
         covers = await self._covers(immich, memories)
         try:
@@ -72,7 +91,8 @@ class Sender:
         except httpx.HTTPError as error:
             self._store.record_error(user.mm_user_id, f"Mattermost post failed: {error}")
             return self._log(user, len(memories), Outcome.FAILED, str(error))
-        self._store.mark_sent(user.mm_user_id, day)
+        if mark_sent:
+            self._store.mark_sent(user.mm_user_id, day)
         return self._log(user, len(memories), Outcome.SENT)
 
     async def _covers(self, immich: ImmichClient, memories: list[Memory]) -> list[bytes]:
