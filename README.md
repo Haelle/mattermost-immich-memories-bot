@@ -51,7 +51,7 @@ volumes:
 Les valeurs sont des exemples : adapter les URL et fournir les secrets (`MM_BOT_TOKEN`, `MM_COMMAND_TOKENS`, `MASTER_KEY`) depuis un `.env` plutôt qu'en clair. Mattermost doit joindre le service à `PUBLIC_CALLBACK_URL` : le publier derrière un reverse proxy HTTPS, car le jeton de la commande et la clé Immich saisie dans la boîte de dialogue transitent dans ces requêtes. Si cette adresse est une IP privée, l'ajouter dans *Console système → Environnement → Développeur → Autoriser les connexions internes non fiables vers*. Pour générer `MASTER_KEY` :
 
 ```sh
-docker run --rm python:3.12-slim sh -c "pip -q install cryptography && python -c 'from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())'"
+openssl rand -base64 32 | tr '+/' '-_'
 ```
 
 Puis `docker compose up -d`, et vérifier avec son propre compte : `/souvenirs activer`, puis `/souvenirs test`.
@@ -72,7 +72,7 @@ Chaque variable peut aussi être lue depuis un fichier via `<NOM>_FILE`.
 | `MM_URL` | requis | URL de Mattermost |
 | `MM_BOT_TOKEN` | requis | Jeton du compte bot |
 | `MM_COMMAND_TOKENS` | requis | Jetons de la commande slash, séparés par des virgules (un par équipe) |
-| `MASTER_KEY` | requis | Clé Fernet de chiffrement des clés Immich |
+| `MASTER_KEY` | requis | Clé Fernet de chiffrement des clés Immich : 32 octets en base64 URL-safe (44 caractères finissant par `=`), sans guillemets |
 | `PUBLIC_CALLBACK_URL` | requis | Adresse publique du service, vue par Mattermost (`https://souvenirs.example.com`) |
 | `CHECK_INTERVAL_MINUTES` | `60` | Intervalle entre deux passages d'envoi ; diviseur de 60 (1, 5, 15, 30, 60) |
 | `TZ` | `Europe/Paris` | Fuseau qui définit « aujourd'hui » et les heures d'envoi |
@@ -95,7 +95,7 @@ docker build -t mattermost-immich-memories-bot .
 
 La CI GitHub Actions lance le lint, le typage, les tests et la construction de l'image (amd64 et arm64) sur chaque pull request. Elle publie l'image sur Docker Hub ([`estb/mattermost-immich-memories-bot`](https://hub.docker.com/r/estb/mattermost-immich-memories-bot)) :
 
-- à chaque push sur `master` : tag `dev` ;
+- à chaque push sur `main` : tag `dev` ;
 - à chaque tag git `X.Y.Z` (ou `vX.Y.Z`) : tags `X.Y.Z`, `X.Y`, `X` et `latest`.
 
 Secrets GitHub requis : `DOCKERHUB_USERNAME` et `DOCKERHUB_ACCESS_TOKEN`.
