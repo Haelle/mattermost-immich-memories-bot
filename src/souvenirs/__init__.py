@@ -35,7 +35,7 @@ def build_app(settings: Settings) -> FastAPI:
     def immich_for(api_key: str) -> ImmichClient:
         return ImmichClient(settings.immich_url, api_key, http)
 
-    sender = Sender(store, mattermost, immich_for, settings.link_template, settings.check_interval_minutes)
+    sender = Sender(store, mattermost, immich_for, settings.immich_url, settings.check_interval_minutes)
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):

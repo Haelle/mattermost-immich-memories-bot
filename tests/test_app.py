@@ -53,7 +53,7 @@ def client(store, immich, mattermost, clock):
     def immich_for(api_key):
         return ImmichClient("http://immich:2283", api_key, immich_http, retry_delay_seconds=0)
 
-    sender = Sender(store, mattermost_client, immich_for, "immich://memory?id={id}", interval_minutes=60)
+    sender = Sender(store, mattermost_client, immich_for, "https://photos.example", interval_minutes=60)
     app = create_app(
         store=store,
         mattermost=mattermost_client,
@@ -262,7 +262,7 @@ def test_test_sends_today_memories_even_if_already_sent(client, store, immich, m
 
     [post] = mattermost.bodies("/api/v4/posts")
     assert post["channel_id"] == "dm1"
-    assert "[Voir les souvenirs](immich://memory)" in post["message"]
+    assert "[Ouvrir dans l'app](immich://memory)" in post["message"]
     assert response.json()["response_type"] == "ephemeral"
 
 

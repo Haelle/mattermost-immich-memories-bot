@@ -13,7 +13,7 @@ from souvenirs.store import Store, User
 
 logger = logging.getLogger(__name__)
 
-MEMORY_LANE_LINK = "immich://memory"
+APP_MEMORY_LANE_LINK = "immich://memory"
 KEY_REJECTED_WARNING = "Ta clé Immich ne fonctionne plus, relance `/souvenirs activer`."
 
 
@@ -30,13 +30,13 @@ class Sender:
         store: Store,
         mattermost: MattermostClient,
         immich_for: Callable[[str], ImmichClient],
-        link_template: str,
+        immich_web_url: str,
         interval_minutes: int,
     ):
         self._store = store
         self._mattermost = mattermost
         self._immich_for = immich_for
-        self._link_template = link_template
+        self._immich_web_url = immich_web_url.rstrip("/")
         self._interval_minutes = interval_minutes
 
     async def run_tick(self, tick: datetime) -> None:
@@ -56,7 +56,7 @@ class Sender:
         async def memories_of_the_day(immich: ImmichClient) -> tuple[date, list[Memory]]:
             return day, await immich.memories_on(day)
 
-        return await self._deliver(user, memories_of_the_day, lambda memories: MEMORY_LANE_LINK, mark_sent=True)
+        return await self._deliver(user, memories_of_the_day, lambda memory: APP_MEMORY_LANE_LINK, mark_sent=True)
 
     async def deliver_latest(self, user: User) -> Outcome:
         async def latest_memory(immich: ImmichClient) -> tuple[date, list[Memory]] | None:
@@ -64,14 +64,14 @@ class Sender:
             return (latest[0], [latest[1]]) if latest else None
 
         return await self._deliver(
-            user, latest_memory, lambda memories: self._link_template.format(id=memories[0].id), mark_sent=False
+            user, latest_memory, lambda memory: f"{APP_MEMORY_LANE_LINK}?id={memory.id}", mark_sent=False
         )
 
     async def _deliver(
         self,
         user: User,
         fetch: Callable[[ImmichClient], Awaitable[tuple[date, list[Memory]] | None]],
-        link_for: Callable[[list[Memory]], str],
+        app_link_for: Callable[[Memory], str],
         mark_sent: bool,
     ) -> Outcome:
         immich = self._immich_for(user.immich_key)
@@ -91,13 +91,20 @@ class Sender:
 
         covers = await self._covers(immich, memories)
         try:
-            await self._mattermost.post(user.dm_channel_id, format_message(day, memories, link_for(memories)), covers)
+            await self._mattermost.post(
+                user.dm_channel_id,
+                format_message(day, memories, app_link_for(memories[0]), self._web_link(memories[0])),
+                covers,
+            )
         except httpx.HTTPError as error:
             self._store.record_error(user.mm_user_id, f"Mattermost post failed: {error}")
             return self._log(user, len(memories), Outcome.FAILED, str(error))
         if mark_sent:
             self._store.mark_sent(user.mm_user_id, day)
         return self._log(user, len(memories), Outcome.SENT)
+
+    def _web_link(self, memory: Memory) -> str:
+        return f"{self._immich_web_url}/memories/{memory.id}"
 
     async def _covers(self, immich: ImmichClient, memories: list[Memory]) -> list[bytes]:
         covers = []
