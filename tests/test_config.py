@@ -18,7 +18,6 @@ def test_defaults_apply_when_optional_values_are_missing():
     assert settings.check_interval_minutes == 60
     assert settings.command_tokens == {"token-a", "token-b"}
     assert settings.db_path == "/data/souvenirs.db"
-    assert settings.link_template == "immich://memory?id={id}"
 
 
 def test_optional_values_are_read():

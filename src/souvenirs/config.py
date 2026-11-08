@@ -33,7 +33,6 @@ class Settings:
     master_key: str
     callback_url: str
     db_path: str
-    link_template: str
     check_interval_minutes: int
 
     @classmethod
@@ -46,6 +45,5 @@ class Settings:
             master_key=_value(env, "MASTER_KEY"),
             callback_url=_value(env, "PUBLIC_CALLBACK_URL"),
             db_path=_value(env, "DB_PATH", "/data/souvenirs.db"),
-            link_template=_value(env, "LINK_TEMPLATE", "immich://memory?id={id}"),
             check_interval_minutes=_check_interval(env),
         )

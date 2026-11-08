@@ -36,7 +36,7 @@ def sender(store, immich, mattermost):
         store=store,
         mattermost=MattermostClient("https://mm.example", "bot-token", mattermost_http),
         immich_for=lambda api_key: ImmichClient("http://immich:2283", api_key, immich_http, retry_delay_seconds=0),
-        link_template="immich://memory?id={id}",
+        immich_web_url="https://photos.example/",
         interval_minutes=60,
     )
 
@@ -57,7 +57,10 @@ async def test_deliver_posts_memories_with_covers_and_marks_sent(sender, store, 
     assert outcome is Outcome.SENT
     [post] = posted_messages(mattermost)
     assert post["channel_id"] == "dm-u1"
-    assert "[Voir les souvenirs](immich://memory)\n" in post["message"]
+    assert (
+        "[Ouvrir dans l'app](immich://memory) · [Ouvrir sur le web](https://photos.example/memories/m2021)\n"
+        in (post["message"])
+    )
     assert "- Il y a 5 ans — 2021 · 2 photos" in post["message"]
     assert "- Il y a 10 ans — 2016 · 1 photo" in post["message"]
     assert post["file_ids"] == ["file-1", "file-2"]
@@ -76,7 +79,10 @@ async def test_deliver_latest_posts_the_last_memory_without_marking_sent(sender,
     [post] = posted_messages(mattermost)
     assert post["channel_id"] == "dm-u1"
     assert post["message"].startswith("#### Tes souvenirs du 8 octobre")
-    assert "[Voir les souvenirs](immich://memory?id=m2019)" in post["message"]
+    assert (
+        "[Ouvrir dans l'app](immich://memory?id=m2019) · [Ouvrir sur le web](https://photos.example/memories/m2019)"
+        in post["message"]
+    )
     assert post["file_ids"] == ["file-1"]
     assert store.get("u1").last_sent_on is None
 
