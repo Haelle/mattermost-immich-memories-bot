@@ -1,6 +1,6 @@
 # mattermost-immich-memories-bot
 
-Bot Mattermost qui envoie chaque jour, en conversation privée, les souvenirs Immich « ce jour-là » de chaque utilisateur inscrit, avec un lien `immich://` par souvenir et sa photo de couverture.
+Bot Mattermost qui envoie chaque jour, en conversation privée, les souvenirs Immich « ce jour-là » de chaque utilisateur inscrit, avec la photo de couverture de chaque souvenir et un seul lien `immich://memory` qui ouvre les souvenirs du jour dans l'application mobile Immich, à parcourir en swipant.
 
 Chaque utilisateur s'inscrit seul avec `/souvenirs activer` et sa propre clé API Immich (lecture seule), saisie dans une boîte de dialogue : la clé ne transite jamais par un message.
 
@@ -77,7 +77,7 @@ Chaque variable peut aussi être lue depuis un fichier via `<NOM>_FILE`.
 | `CHECK_INTERVAL_MINUTES` | `60` | Intervalle entre deux passages d'envoi ; diviseur de 60 (1, 5, 15, 30, 60) |
 | `TZ` | `Europe/Paris` | Fuseau qui définit « aujourd'hui » et les heures d'envoi |
 | `DB_PATH` | `/data/souvenirs.db` | Base SQLite, sur un volume |
-| `LINK_TEMPLATE` | `immich://memory?id={id}` | Modèle de lien vers un souvenir |
+| `LINK_TEMPLATE` | `immich://memory?id={id}` | Modèle de lien vers un souvenir précis, utilisé par `/souvenirs test` quand il envoie le dernier souvenir faute de souvenir du jour |
 
 Chaque utilisateur choisit son heure d'envoi dans la boîte de dialogue d'activation (09:00 proposé), puis avec `/souvenirs heure`. Les envois se calent sur les multiples de l'intervalle depuis minuit : avec 60 minutes, une heure réglée à 08:30 part à 09:00. Un passage manqué (conteneur arrêté) n'est pas rattrapé.
 
