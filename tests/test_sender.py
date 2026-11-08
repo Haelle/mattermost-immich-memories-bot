@@ -57,8 +57,9 @@ async def test_deliver_posts_memories_with_covers_and_marks_sent(sender, store, 
     assert outcome is Outcome.SENT
     [post] = posted_messages(mattermost)
     assert post["channel_id"] == "dm-u1"
-    assert "immich://memory?id=m2021" in post["message"]
-    assert "immich://memory?id=m2016" in post["message"]
+    assert "[Voir les souvenirs](immich://memory)\n" in post["message"]
+    assert "- Il y a 5 ans — 2021 · 2 photos" in post["message"]
+    assert "- Il y a 10 ans — 2016 · 1 photo" in post["message"]
     assert post["file_ids"] == ["file-1", "file-2"]
     uploads = [request.content for request in mattermost.requests if request.url.path == "/api/v4/files"]
     assert b"jpeg-a1" in uploads[0] and b"jpeg-a3" in uploads[1]
@@ -75,7 +76,7 @@ async def test_deliver_latest_posts_the_last_memory_without_marking_sent(sender,
     [post] = posted_messages(mattermost)
     assert post["channel_id"] == "dm-u1"
     assert post["message"].startswith("#### Tes souvenirs du 8 octobre")
-    assert "[Il y a 7 ans — 2019 · 1 photo](immich://memory?id=m2019)" in post["message"]
+    assert "[Voir les souvenirs](immich://memory?id=m2019)" in post["message"]
     assert post["file_ids"] == ["file-1"]
     assert store.get("u1").last_sent_on is None
 
@@ -108,7 +109,7 @@ async def test_missing_thumbnail_still_sends_link(sender, store, immich, matterm
 
     assert outcome is Outcome.SENT
     [post] = posted_messages(mattermost)
-    assert "immich://memory?id=m2021" in post["message"]
+    assert "(immich://memory)" in post["message"]
     assert post["file_ids"] == []
 
 

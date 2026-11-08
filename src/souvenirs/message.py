@@ -27,12 +27,11 @@ def _french_day(day: date) -> str:
     return f"{day_number} {FRENCH_MONTHS[day.month - 1]}"
 
 
-def format_message(day: date, memories: list[Memory], link_template: str) -> str:
-    lines = [f"#### Tes souvenirs du {_french_day(day)}"]
+def format_message(day: date, memories: list[Memory], link: str) -> str:
+    lines = [f"#### Tes souvenirs du {_french_day(day)}", f"[Voir les souvenirs]({link})"]
     for memory in memories:
-        label = (
-            f"Il y a {_plural(day.year - memory.year, 'an', 'ans')} — {memory.year}"
+        lines.append(
+            f"- Il y a {_plural(day.year - memory.year, 'an', 'ans')} — {memory.year}"
             f" · {_plural(memory.asset_count, 'photo', 'photos')}"
         )
-        lines.append(f"- [{label}]({link_template.format(id=memory.id)})")
     return "\n".join(lines)

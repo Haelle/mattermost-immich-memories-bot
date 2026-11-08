@@ -262,7 +262,7 @@ def test_test_sends_today_memories_even_if_already_sent(client, store, immich, m
 
     [post] = mattermost.bodies("/api/v4/posts")
     assert post["channel_id"] == "dm1"
-    assert "immich://memory?id=m2021" in post["message"]
+    assert "[Voir les souvenirs](immich://memory)" in post["message"]
     assert response.json()["response_type"] == "ephemeral"
 
 

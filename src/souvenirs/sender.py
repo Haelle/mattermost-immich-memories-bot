@@ -13,6 +13,7 @@ from souvenirs.store import Store, User
 
 logger = logging.getLogger(__name__)
 
+MEMORY_LANE_LINK = "immich://memory"
 KEY_REJECTED_WARNING = "Ta clé Immich ne fonctionne plus, relance `/souvenirs activer`."
 
 
@@ -55,19 +56,22 @@ class Sender:
         async def memories_of_the_day(immich: ImmichClient) -> tuple[date, list[Memory]]:
             return day, await immich.memories_on(day)
 
-        return await self._deliver(user, memories_of_the_day, mark_sent=True)
+        return await self._deliver(user, memories_of_the_day, lambda memories: MEMORY_LANE_LINK, mark_sent=True)
 
     async def deliver_latest(self, user: User) -> Outcome:
         async def latest_memory(immich: ImmichClient) -> tuple[date, list[Memory]] | None:
             latest = await immich.latest_memory()
             return (latest[0], [latest[1]]) if latest else None
 
-        return await self._deliver(user, latest_memory, mark_sent=False)
+        return await self._deliver(
+            user, latest_memory, lambda memories: self._link_template.format(id=memories[0].id), mark_sent=False
+        )
 
     async def _deliver(
         self,
         user: User,
         fetch: Callable[[ImmichClient], Awaitable[tuple[date, list[Memory]] | None]],
+        link_for: Callable[[list[Memory]], str],
         mark_sent: bool,
     ) -> Outcome:
         immich = self._immich_for(user.immich_key)
@@ -87,7 +91,7 @@ class Sender:
 
         covers = await self._covers(immich, memories)
         try:
-            await self._mattermost.post(user.dm_channel_id, format_message(day, memories, self._link_template), covers)
+            await self._mattermost.post(user.dm_channel_id, format_message(day, memories, link_for(memories)), covers)
         except httpx.HTTPError as error:
             self._store.record_error(user.mm_user_id, f"Mattermost post failed: {error}")
             return self._log(user, len(memories), Outcome.FAILED, str(error))
